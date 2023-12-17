@@ -25,14 +25,14 @@ class SentenceTTS:
             self.speaker_embedding,
         ) = self.model.get_conditioning_latents(audio_path=[self.sample])
         self.whisper_model = whisperx.load_model(
-            "large-v3", "cuda", compute_type="float16"
+            "large-v3", "cuda", language="en", compute_type="float16"
         )
         self.align_model, self.align_metadata = whisperx.load_align_model(
             language_code="en", device="cuda"
         )
 
     def inference(self, text):
-        text = text.trim() + " pause"
+        text = text.strip() + " pause"
         out = self.model.inference(
             text,
             "en",
