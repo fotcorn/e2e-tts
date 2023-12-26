@@ -5,7 +5,8 @@ from nltk.tokenize import sent_tokenize
 
 
 class TextPreprocessor:
-    def __init__(self):
+    def __init__(self, max_sentence_length):
+        self.max_sentence_length = max_sentence_length
         self.normalizer = Normalizer(input_case="cased", lang="en")
 
     def _replace_boeing_numbers(self, text):
@@ -32,7 +33,7 @@ class TextPreprocessor:
 
         return re.sub(pattern, replacer, text)
 
-    def _force_splitter(self, sentence, token, max_length=250):
+    def _force_splitter(self, sentence, token, max_length):
         out = []
         while True:
             s = sentence.split(token, 1)
@@ -47,7 +48,7 @@ class TextPreprocessor:
                 out.append(s2.strip())
                 return out
 
-    def _split_text(self, sentence, max_length=250):
+    def _split_text(self, sentence, max_length):
         if len(sentence) < max_length:
             return [sentence]
         out = []
@@ -69,6 +70,6 @@ class TextPreprocessor:
 
         split_sentences = []
         for sentence in sentences:
-            split_sentences.extend(self._split_text(sentence))
+            split_sentences.extend(self._split_text(sentence, self.max_sentence_length))
 
         return split_sentences
