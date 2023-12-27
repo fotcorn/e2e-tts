@@ -33,32 +33,58 @@ class TextPreprocessor:
 
         return re.sub(pattern, replacer, text)
 
-    def _force_splitter(self, sentence, token, max_length):
-        out = []
-        while True:
-            s = sentence.split(token, 1)
-            if len(s) == 1:
-                out.append(sentence)
-                return out
-            s1, s2 = s
-            out.append(s1.strip() + token)
-            if len(s2) > max_length:
-                sentence = s2
-            else:
-                out.append(s2.strip())
-                return out
-
-    def _split_text(self, sentence, max_length):
+    def _split_sentence(self, sentence, max_length):
         if len(sentence) < max_length:
             return [sentence]
-        out = []
-        splits = self._force_splitter(sentence, ",", max_length)
-        for split in splits:
-            if len(split) < max_length:
-                out.append(split)
-            else:
-                out.extend(self._force_splitter(split, ";", max_length))
-        return out
+        indices = [i for i, c in enumerate(sentence) if c == "," or c == ";"]
+        subsequence_lengths = (
+            [indices[0]]
+            + [j - i for i, j in zip(indices[:-1], indices[1:])]
+            + [len(sentence) - indices[-1]]
+        )
+
+        def helper(subseq, idx):
+            if idx == len(subsequence_lengths):
+                if subseq:
+                    yield subseq
+                return
+            yield from helper(subseq + [[subsequence_lengths[idx]]], idx + 1)
+            if subseq:
+                yield from helper(
+                    subseq[:-1] + [subseq[-1] + [subsequence_lengths[idx]]], idx + 1
+                )
+
+        subsequences = list(helper([], 0))
+
+        best_seq = []
+        best_seq_score = 10**100
+
+        def calc_score(subseq):
+            score = 0
+            for s in subseq:
+                total = sum(s)
+                if total > max_length:
+                    return None
+                # Cube, so differences close to 200 are better
+                score += (max_length - total) ** 2
+            return score
+
+        for subseq in subsequences:
+            score = calc_score(subseq)
+            if score and score < best_seq_score:
+                best_seq = subseq
+                best_seq_score = score
+
+        # reconstruct the sentence
+        start = 0
+        end = 0
+        splits = []
+        for seq in best_seq:
+            for index in seq:
+                end += index
+            splits.append(sentence[start : end + 1].strip())
+            start = end + 1
+        return splits
 
     def preprocess(self, text):
         text = self._replace_boeing_numbers(text)
@@ -70,6 +96,8 @@ class TextPreprocessor:
 
         split_sentences = []
         for sentence in sentences:
-            split_sentences.extend(self._split_text(sentence, self.max_sentence_length))
+            split_sentences.extend(
+                self._split_sentence(sentence, self.max_sentence_length)
+            )
 
         return split_sentences

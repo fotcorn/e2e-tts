@@ -27,7 +27,7 @@ class SentenceTTS:
             self.speaker_embedding,
         ) = self.model.get_conditioning_latents(audio_path=[self.sample])
 
-        self.whisper_model = whisper_timestamped.load_model("small.en", "cuda")
+        self.whisper_model = whisper_timestamped.load_model("small", "cuda")
 
     def inference(self, text):
         for i in range(3):
@@ -38,10 +38,11 @@ class SentenceTTS:
                 continue
 
     def _inference(self, text):
-        text = text.strip() + " pause"
+        text = text.strip()
+        padded_text = text + " pause"
 
         out = self.model.inference(
-            text,
+            padded_text,
             "en",
             self.gpt_cond_latent,
             self.speaker_embedding,
@@ -55,12 +56,35 @@ class SentenceTTS:
             self.whisper_model, audio, language="en"
         )
 
-        pause_word = result["segments"][-1]["words"][-1]
-        if not "pause" in pause_word["text"].lower():
-            print(text)
-            print(json.dumps(result, indent=2, ensure_ascii=False))
-            raise Exception("'pause' is not the last detected word")
-        end_sample = int(pause_word["start"] * 24000)
+        last_word = result["segments"][-1]["words"][-1]
+        last_word_text = last_word["text"].lower()
+
+        def normalize_word(word):
+            word = word.lower()
+            word = word.replace(".", "").replace(",", "").replace(";", "")
+            word = word.strip()
+            return word
+
+        if not "pause" in normalize_word(last_word_text):
+            if normalize_word(text.rsplit(" ", 1)[1]) == normalize_word(last_word_text):
+                print("did not find pause, but found last word")
+                end_sample = int(last_word["end"] * 24000)
+            else:
+                import IPython
+
+                IPython.display.display(
+                    IPython.display.Audio(
+                        torch.tensor(out["wav"]).unsqueeze(0), rate=24000
+                    )
+                )
+                print(last_word)
+                print("-------------")
+                print(padded_text)
+                print("-------------")
+                print(json.dumps(result, indent=2, ensure_ascii=False))
+                raise Exception("'pause' is not the last detected word")
+        else:
+            end_sample = int(last_word["start"] * 24000)
 
         fade_duration = 0.2
 
