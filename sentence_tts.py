@@ -83,7 +83,11 @@ class SentenceTTS:
                 print("-------------")
                 print(padded_text)
                 print("-------------")
-                print(json.dumps(result, indent=2, ensure_ascii=False))
+                print(
+                    json.dumps(
+                        result["segments"][-1]["words"], indent=2, ensure_ascii=False
+                    )
+                )
                 raise Exception("'pause' is not the last detected word")
         else:
             end_sample = int(last_word["start"] * 24000)
