@@ -30,12 +30,13 @@ class SentenceTTS:
         self.whisper_model = whisper_timestamped.load_model("small", "cuda")
 
     def inference(self, text):
-        for i in range(3):
+        for i in range(5):
             try:
                 return self._inference(text)
             except Exception as ex:
                 print(f"Try {i} failed: {ex}")
                 continue
+        raise Exception("Inference failed after 5 tries")
 
     def _inference(self, text):
         text = text.strip()
