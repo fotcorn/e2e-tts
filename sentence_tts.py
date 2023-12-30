@@ -1,10 +1,8 @@
 import os
-import math
 import tempfile
 import torch
 import soundfile as sf
 import noisereduce
-import json
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 import whisper_timestamped
@@ -18,7 +16,7 @@ class SentenceTTS:
         self.model.load_checkpoint(
             self.config,
             checkpoint_dir=model_dir,
-            use_deepspeed=False,
+            use_deepspeed=True,
         )
         _ = self.model.cuda()
         self.sample = sample_path
