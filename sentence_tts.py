@@ -48,13 +48,14 @@ class SentenceTTS:
             self.gpt_cond_latent,
             self.speaker_embedding,
         )
+
         with tempfile.NamedTemporaryFile(suffix=".wav") as temp_file:
             sf.write(temp_file.name, out["wav"], 24000)
             temp_file_path = temp_file.name
             audio = whisper_timestamped.load_audio(temp_file_path)
 
         result = whisper_timestamped.transcribe(
-            self.whisper_model, audio, language="en"
+            self.whisper_model, audio, language="en", seed=None
         )
 
         last_word = result["segments"][-1]["words"][-1]
